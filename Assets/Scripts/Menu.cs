@@ -7,7 +7,7 @@ public class ButtonLoopExpand : MonoBehaviour
     public Button PlayButton;
     public float minScale = 1f;
     public float maxScale = 1.2f;
-    public float speed = 2f; // how fast it expands/shrinks
+    public float speed = 2f;
 
     private Vector3 originalScale;
 

@@ -2,9 +2,9 @@ using UnityEngine;
 using System.Collections;
 using UnityEngine.UI;
 
-    public class Lane : MonoBehaviour
+public class Lane : MonoBehaviour
 {
-    public GameObject carPrefab;
+    public GameObject[] carPrefabs;
     public Transform spawnPoint;
     public Text multiplierText;
     public GameObject FirstCircle;
@@ -32,7 +32,7 @@ using UnityEngine.UI;
 
         while (true)
         {
-            if (laneActive && carPrefab != null && spawnPoint != null)
+            if (laneActive && carPrefabs != null && spawnPoint != null)
             {
                 float spawnChance = 0f;
                 switch (difficulty)
@@ -45,7 +45,10 @@ using UnityEngine.UI;
 
                 if (Random.value < spawnChance)
                 {
-                    GameObject car = Instantiate(carPrefab, spawnPoint.position, Quaternion.identity, transform);
+                    GameObject randomCarPrefab = carPrefabs[Random.Range(0, carPrefabs.Length)];
+
+                    GameObject car = Instantiate(randomCarPrefab, spawnPoint.position, Quaternion.identity, transform);
+
                     Car carScript = car.GetComponent<Car>();
                     if (carScript != null)
                         carScript.speed = Random.Range(minSpeed, maxSpeed);

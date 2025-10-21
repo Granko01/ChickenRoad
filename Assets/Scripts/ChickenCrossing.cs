@@ -279,7 +279,6 @@ public class ChickenCrossing : MonoBehaviour
             yield return null;
         }
 
-        // Ensure it lands exactly where intended
         scrollRect.content.localPosition = targetScrollPos;
         SideMove.transform.localPosition = targetSidePos;
     }

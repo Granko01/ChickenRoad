@@ -3,7 +3,7 @@ using UnityEngine;
 public class Car : MonoBehaviour
 {
     public float speed = 700f;
-    public float destroyY = -5f; // destroy after passing bottom
+    public float destroyY = -5f;
 
     void Update()
     {
