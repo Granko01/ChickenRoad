@@ -47,7 +47,7 @@ public class ChickenCrossing : MonoBehaviour
     public int AmountWon;
 
     [Header("ScrollView Settings")]
-    public ScrollRect scrollRect;
+    public GameObject MainLanes;
     public float scrollSpeed = 10f;
     private float targetVertical = 1f;
 
@@ -262,7 +262,7 @@ public class ChickenCrossing : MonoBehaviour
 
     IEnumerator LerpScrollAndSideMove()
     {
-        Vector3 startScrollPos = scrollRect.content.localPosition;
+        Vector3 startScrollPos = MainLanes.transform.localPosition;
         Vector3 targetScrollPos = startScrollPos + new Vector3(-295f, 0, 0);
 
         Vector3 startSidePos = SideMove.transform.localPosition;
@@ -274,12 +274,12 @@ public class ChickenCrossing : MonoBehaviour
         while (t < 1f)
         {
             t += Time.deltaTime / duration;
-            scrollRect.content.localPosition = Vector3.Lerp(startScrollPos, targetScrollPos, t);
+            MainLanes.transform.localPosition = Vector3.Lerp(startScrollPos, targetScrollPos, t);
             SideMove.transform.localPosition = Vector3.Lerp(startSidePos, targetSidePos, t);
             yield return null;
         }
 
-        scrollRect.content.localPosition = targetScrollPos;
+        MainLanes.transform.localPosition = targetScrollPos;
         SideMove.transform.localPosition = targetSidePos;
     }
 
