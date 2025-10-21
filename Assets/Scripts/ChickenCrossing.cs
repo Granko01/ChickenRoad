@@ -12,17 +12,25 @@ public class ChickenCrossing : MonoBehaviour
     [Header("Player")]
     public Transform chicken;
     public int currentLane = -1;
+    public GameObject SideMove;
 
     [Header("Bet System")]
     public int playerBalance = 1000;   // starting balance
     public int currentBet = 0;
     public Text balanceText;
-    public Text betText;
+    public int currentBalance;
+    public Text currentBalanceText;
+    public Text[] betText;
     public Button cashoutButton;
     public Button JumpButton;
     public Button[] Diffbuttons;
     public Text DiffText;
     private const string BalanceKey = "BalanceKey";
+    public Text WinAmount;
+    public GameObject Youlose;
+    public GameObject YouWon;
+    public GameObject InfoPanel;
+
 
     [Header("Lanes & Difficulty")]
     public Transform[] lanePositions;
@@ -84,10 +92,19 @@ public class ChickenCrossing : MonoBehaviour
     {
         if (gameOver) return;
 
+        SetupMultipliers();
+        AssignLaneMultipliers();
+        UpdateMultiplierUI();
+
         if (Input.GetKeyDown(KeyCode.Space) && canJump)
         {
             Jump();
             StartCoroutine(JumpCooldown());
+        }
+        if (currentLane == 29)
+        {
+            YouWon.gameObject.SetActive(true);
+            Cashout();
         }
     }
 
@@ -96,26 +113,56 @@ public class ChickenCrossing : MonoBehaviour
         if (tag == "Easy")
         {
             currentDifficulty = Difficulty.Easy;
-            DiffText.text = "You difficulty : Easy";
+            DiffText.text = "Your difficulty : Easy";
+            for (int i = 0; i < Diffbuttons.Length; i++)
+            {
+                Diffbuttons[i].interactable = true;
+            }
+            Diffbuttons[0].interactable = false;
         }
         if (tag == "Medium")
         {
             currentDifficulty = Difficulty.Medium;
-            DiffText.text = "You difficulty : Medium";
+            DiffText.text = "Your difficulty : Medium";
+            for (int i = 0; i < Diffbuttons.Length; i++)
+            {
+                Diffbuttons[i].interactable = true;
+            }
+            Diffbuttons[1].interactable = false;
         }
         if (tag == "Hard")
         {
             currentDifficulty = Difficulty.Hard;
-            DiffText.text = "You difficulty : Hard";
+            DiffText.text = "Your difficulty : Hard";
+            for (int i = 0; i < Diffbuttons.Length; i++)
+            {
+                Diffbuttons[i].interactable = true;
+            }
+            Diffbuttons[2].interactable = false;
         }
         if (tag == "Impossible")
         {
             currentDifficulty = Difficulty.Impossible;
-            DiffText.text = "You difficulty : Impossible";
+            DiffText.text = "Your difficulty : Impossible";
+            for (int i = 0; i < Diffbuttons.Length; i++)
+            {
+                Diffbuttons[i].interactable = true;
+            }
+            Diffbuttons[3].interactable = false;
         }
     }
 
-
+    public void InfoPanelMeth()
+    {
+        if (InfoPanel.activeSelf)
+        {
+            InfoPanel.gameObject.SetActive(false);
+        }
+        else
+        {
+            InfoPanel.gameObject.SetActive(true);
+        }
+    }
     private IEnumerator JumpCooldown()
     {
         canJump = false;
@@ -126,9 +173,32 @@ public class ChickenCrossing : MonoBehaviour
     void SetupMultipliers()
     {
         multipliers = new float[lanePositions.Length];
-        for (int i = 0; i < lanePositions.Length; i++)
-            multipliers[i] = 1f + 0.15f * (i + 1);
+
+        switch (currentDifficulty)
+        {
+            case Difficulty.Easy:
+                for (int i = 0; i < lanePositions.Length; i++)
+                    multipliers[i] = 1f + 0.15f * (i + 1);
+                break;
+
+            case Difficulty.Medium:
+                for (int i = 0; i < lanePositions.Length; i++)
+                    multipliers[i] = 1f + 0.30f * (i + 1);
+                break;
+
+            case Difficulty.Hard:
+                for (int i = 0; i < lanePositions.Length; i++)
+                    multipliers[i] = 1f + 0.50f * (i + 1);
+                break;
+
+            case Difficulty.Impossible:
+                for (int i = 0; i < lanePositions.Length; i++)
+                    multipliers[i] = 1f + 0.75f * (i + 1);
+                break;
+        }
     }
+
+
     public void GetBalance()
     {
         playerBalance = PlayerPrefs.GetInt(BalanceKey, playerBalance);
@@ -138,34 +208,43 @@ public class ChickenCrossing : MonoBehaviour
         PlayerPrefs.SetInt(BalanceKey, playerBalance);
         PlayerPrefs.Save();
     }
+    bool isJumping;
     public void Jump()
     {
+        if (isJumping) return;
+        StartCoroutine(JumpRoutine());
+    }
+
+    IEnumerator JumpRoutine()
+    {
+        isJumping = true;
         currentLane++;
+        chickenAnim.Jump();
 
         if (currentLane >= lanePositions.Length)
         {
             WinGame();
-            return;
+            Time.timeScale = 0;
         }
+
         if (currentLane <= 1)
         {
-             Transform bottomPoint = lanePositions[currentLane].Find("BottomPoint");
-             chicken.position = bottomPoint != null ? bottomPoint.position : lanePositions[currentLane].position;
+            Transform bottomPoint = lanePositions[currentLane].Find("BottomPoint");
+            chicken.position = bottomPoint != null ? bottomPoint.position : lanePositions[currentLane].position;
         }
-       
+
 
         if (barrierPrefab != null && currentLane < lanes.Length)
-            StartCoroutine(SpawnBarrier(lanes[currentLane], 0.5f));
+            StartCoroutine(SpawnBarrier(lanes[currentLane], 0.35f));
 
         lanes[currentLane].StopLane();
 
         for (int i = currentLane + 1; i <= Mathf.Min(lanes.Length - 1, currentLane + 3); i++)
             lanes[i].StartLane();
+
         if (currentLane > 1)
         {
-            Vector3 pos = scrollRect.content.localPosition;
-            pos.y += 311.2f;
-            scrollRect.content.localPosition = pos;
+            StartCoroutine(LerpScrollAndSideMove());
         }
 
         UpdateLaneStates();
@@ -175,7 +254,36 @@ public class ChickenCrossing : MonoBehaviour
         {
             Diffbuttons[i].interactable = false;
         }
+        yield return new WaitForSeconds(0.25f);
+        chickenAnim.Idle();
+
+        isJumping = false;
     }
+
+    IEnumerator LerpScrollAndSideMove()
+    {
+        Vector3 startScrollPos = scrollRect.content.localPosition;
+        Vector3 targetScrollPos = startScrollPos + new Vector3(-295f, 0, 0);
+
+        Vector3 startSidePos = SideMove.transform.localPosition;
+        Vector3 targetSidePos = startSidePos + new Vector3(-295f, 0, 0);
+
+        float duration = 0.4f; // how smooth/fast it moves
+        float t = 0f;
+
+        while (t < 1f)
+        {
+            t += Time.deltaTime / duration;
+            scrollRect.content.localPosition = Vector3.Lerp(startScrollPos, targetScrollPos, t);
+            SideMove.transform.localPosition = Vector3.Lerp(startSidePos, targetSidePos, t);
+            yield return null;
+        }
+
+        // Ensure it lands exactly where intended
+        scrollRect.content.localPosition = targetScrollPos;
+        SideMove.transform.localPosition = targetSidePos;
+    }
+
 
     void UpdateLaneStates()
     {
@@ -192,7 +300,9 @@ public class ChickenCrossing : MonoBehaviour
                     {
                         int bonus = Mathf.RoundToInt(multiplier * 10f);
                         currentBet += bonus;
-                        betText.text = "Cash out $" + currentBet.ToString() + " USD";
+                        currentBalance += bonus;
+                        currentBalanceText.text = currentBalance.ToString();
+                        betText[0].text = "Cash out $" + currentBet.ToString() + " USD";
                         StartCoroutine(ShowBonusEffect(bonus, lanes[i].transform.position));
                     }
                     else
@@ -200,6 +310,7 @@ public class ChickenCrossing : MonoBehaviour
                         Debug.LogWarning($"⚠️ Couldn't parse multiplier text: {lanes[i].multiplierText.text}");
                     }
                 }
+                lanes[i].FirstCircle.gameObject.SetActive(false);
             }
             else if (i < currentLane)
             {
@@ -207,6 +318,9 @@ public class ChickenCrossing : MonoBehaviour
                 {
                     lanes[i].multiplierText.gameObject.SetActive(true);
                     lanes[i].multiplierText.color = Color.white;
+                    lanes[i].FirstCircle.gameObject.SetActive(false);
+                    lanes[i].SecondsCircle.gameObject.SetActive(true);
+
                 }
             }
             else
@@ -215,6 +329,8 @@ public class ChickenCrossing : MonoBehaviour
                 {
                     lanes[i].multiplierText.gameObject.SetActive(true);
                     lanes[i].multiplierText.color = Color.yellow;
+                    lanes[i].FirstCircle.gameObject.SetActive(true);
+                    lanes[i].SecondsCircle.gameObject.SetActive(false);
                 }
             }
         }
@@ -247,7 +363,7 @@ public class ChickenCrossing : MonoBehaviour
         rect.anchoredPosition = startPos;
         AmountWonText.text = "";
     }
-
+    public int FetchBetamount;
     public void PlaceBet(int amount)
     {
         if (amount <= 0) return;
@@ -256,7 +372,8 @@ public class ChickenCrossing : MonoBehaviour
             Debug.Log("Not enough balance!");
             return;
         }
-
+        FetchBetamount = amount;
+        currentBalance = amount;
         currentBet = amount;
         playerBalance -= amount;
         UpdateUI();
@@ -275,7 +392,10 @@ public class ChickenCrossing : MonoBehaviour
     public void LoseBet()
     {
         Debug.Log("You lost your bet!");
-        currentBet = 0;
+        betText[1].text = FetchBetamount.ToString();
+        playerBalance -= FetchBetamount;
+        balanceText.text = playerBalance.ToString();
+        SetBalance();
         UpdateUI();
     }
 
@@ -285,14 +405,17 @@ public class ChickenCrossing : MonoBehaviour
             balanceText.text = $"Balance: {playerBalance}";
 
         if (betText != null)
-            betText.text = currentBet > 0 ? $"Bet: {currentBet}" : "No Bet";
+        {
+            betText[0].text = currentBet > 0 ? $"Bet: {currentBet}" : "No Bet";
+        }
+
 
         if (cashoutButton != null)
         {
             cashoutButton.interactable = currentBet > 0;
             JumpButton.interactable = currentBet > 0;
         }
-            
+
     }
 
 
@@ -313,14 +436,21 @@ public class ChickenCrossing : MonoBehaviour
     IEnumerator SpawnBarrier(Lane lane, float delay)
     {
         yield return new WaitForSecondsRealtime(delay);
+
         Vector3 barrierPos = lane.transform.position;
+        barrierPos.y += 1.5f;
+
         GameObject barrier = Instantiate(barrierPrefab, barrierPos, Quaternion.identity, lane.transform);
         activeBarriers.Add(barrier);
     }
+
     public void Cashout()
     {
         if (currentBet <= 0) return;
-
+         SpriteRenderer sr = GetComponent<SpriteRenderer>();
+        sr.enabled = false;
+        YouWon.gameObject.SetActive(true);
+        WinAmount.text = currentBet.ToString();
         playerBalance += currentBet;
         Debug.Log($"Cashed out: {currentBet}");
         currentBet = 0;
@@ -332,22 +462,34 @@ public class ChickenCrossing : MonoBehaviour
     }
     IEnumerator WaitToReload()
     {
-        yield return new WaitForSecondsRealtime(1.5f);
+        yield return new WaitForSecondsRealtime(3f);
         SceneManager.LoadScene("Gameplay");
     }
     void OnTriggerEnter2D(Collider2D collision)
     {
         if (collision.CompareTag("Car"))
-            Die();
+        {
+            JumpButton.interactable = false;
+            chickenAnim.Died();
+            StartCoroutine(Die());
+        }
+
     }
 
-    void Die()
+    IEnumerator Die()
     {
+        yield return new WaitForSecondsRealtime(4f);
+        Youlose.gameObject.SetActive(true);
+        SpriteRenderer sr = GetComponent<SpriteRenderer>();
+        sr.enabled = false;
         gameOver = true;
         multiplierText.text = "You died! x" + multipliers[Mathf.Clamp(currentLane, 0, multipliers.Length - 1)].ToString("F2");
         foreach (var lane in lanes)
             lane.StopLane();
         Debug.Log("Game Over! Lane reached: " + currentLane);
+        LoseBet();
+        yield return new WaitForSecondsRealtime(2f);
+        SceneManager.LoadScene("Gameplay");
     }
 
     void WinGame()
@@ -368,7 +510,6 @@ public class ChickenCrossing : MonoBehaviour
         int lane = Mathf.Clamp(currentLane, 0, multipliers.Length - 1);
         multiplierText.text = "x" + multipliers[lane].ToString("F2");
 
-        // ✅ also refresh each lane text (in case something overwrote it)
         for (int i = 0; i < lanes.Length; i++)
         {
             if (lanes[i].multiplierText != null)

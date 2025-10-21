@@ -7,6 +7,8 @@ using UnityEngine.UI;
     public GameObject carPrefab;
     public Transform spawnPoint;
     public Text multiplierText;
+    public GameObject FirstCircle;
+    public GameObject SecondsCircle;
     [HideInInspector] public float laneMultiplier = 1f;
     public float minSpeed = 700f;
     public float maxSpeed = 1200f;

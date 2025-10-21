@@ -24,7 +24,7 @@ public class ChickenAnim : MonoBehaviour
     }
     public void Died()
     {
-        animator.SetBool("Died", true);
+        animator.SetBool("Die", true);
     }
 
     // Update is called once per frame
